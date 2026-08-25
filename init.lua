@@ -687,6 +687,22 @@ do
     end,
   })
 
+  -- jdtls (Eclipse JDT Language Server) itself requires a Java 21+ runtime to run,
+  -- regardless of which JDK your projects target. Point it at an sdkman-managed 21+
+  -- JDK via JAVA_HOME for just this one process, without touching the global `java`
+  -- on PATH (which your Maven/Gradle builds may still need to be on 17, etc.).
+  local function find_jdtls_java_home()
+    local sdkman_java_dir = vim.fn.expand '~/.sdkman/candidates/java'
+    if vim.fn.isdirectory(sdkman_java_dir) == 0 then return nil end
+    local candidates = vim.fn.readdir(sdkman_java_dir)
+    table.sort(candidates)
+    for _, name in ipairs(candidates) do
+      local major = tonumber(name:match '^(%d+)')
+      if major and major >= 21 then return sdkman_java_dir .. '/' .. name end
+    end
+    return nil
+  end
+
   -- Enable the following language servers
   --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
   --  See `:help lsp-config` for information about keys and how to configure
@@ -704,6 +720,10 @@ do
     -- ts_ls = {},
 
     stylua = {}, -- Used to format Lua code
+
+    jdtls = { -- Java language server; auto-installed by Mason, uses a per-project workspace dir
+      cmd_env = { JAVA_HOME = find_jdtls_java_home() },
+    },
 
     -- Special Lua Config, as recommended by neovim help docs
     lua_ls = {
